@@ -331,3 +331,23 @@ j('/admin/api/fleet').then(r=>{if(!r.error)show()}).catch(()=>{});
 app.listen({ port: config.port, host: "0.0.0.0" }).then(() => {
   app.log.info(`FlareCrawl gateway on :${config.port} (${config.publicBaseUrl})`);
 });
+
+// ---- idle session cleanup (runs every 5 min, releases Steel + DB) ----
+const IDLE_MIN = config.sessionIdleTimeoutMin;
+app.log.info(`session idle timeout = ${IDLE_MIN} min`);
+setInterval(async () => {
+  try {
+    const rows = await q<{ id: string; container_idx: number; steel_id: string }>(
+      `SELECT id, container_idx, steel_id FROM sessions
+       WHERE status='live' AND created_at < now() - interval '${IDLE_MIN} minutes'`,
+    );
+    for (const r of rows) {
+      await releaseSteelSession(r.container_idx, r.steel_id);
+      await q(`UPDATE sessions SET status='released', released_at=now() WHERE id=$1`, [r.id]);
+      app.log.warn({ sessionId: r.id, container: r.container_idx }, "released idle session");
+    }
+    if (rows.length) app.log.info(`cleanup: released ${rows.length} idle sessions`);
+  } catch (e: any) {
+    app.log.error({ err: e.message }, "idle cleanup cycle failed");
+  }
+}, 5 * 60 * 1000);

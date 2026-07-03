@@ -21,6 +21,8 @@ export const config = {
     cpuCap: process.env.STEEL_CPU_CAP || "2",
   },
 
+  sessionIdleTimeoutMin: num(process.env.SESSION_IDLE_TIMEOUT_MINUTES, 15),
+
   databaseUrl:
     process.env.DATABASE_URL ||
     "postgres://crawl:crawl_pw@localhost:5459/crawl",
