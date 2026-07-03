@@ -1,0 +1,18 @@
+name: flarecrawl
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: crawl-pg
+    environment:
+      POSTGRES_USER: crawl
+      POSTGRES_PASSWORD: crawl_pw
+      POSTGRES_DB: crawl
+    ports:
+      - "5459:5432"
+    volumes:
+      - crawl-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  crawl-pgdata:
